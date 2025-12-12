@@ -1,0 +1,17 @@
+<html lang="jp">
+  <head>
+    <meta charset="UTF-8">
+    <title>Note</title>
+  </head>
+  <body>
+    <form name="text" method="POST" action="/bnote/add">
+      <input type="hidden" id="note_id" name="note_id" value="{{item_id}}">
+      <input type="hidden" id="note_type" name="note_type" value="note">
+      <textarea id="note" name="note" rows="5" cols="33">{{note}}</textarea>
+      <input type="submit" value="Update">
+    </form>
+    <button onclick="location.href='/bnote/delete/{{item_id}}'">Del</button>
+    <hr>
+    <a href="/bnote/list">Today</a> / <a href="/bnote/list-all">All</a>
+  </body>
+</html>

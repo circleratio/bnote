@@ -1,0 +1,28 @@
+<html lang="jp">
+  <head>
+    <meta charset="UTF-8">
+    <title>Note</title>
+  </head>
+  <body>
+    <form name="text" method="POST" action="/bnote/add">
+      <input type="hidden" id="note_id" name="note_id" value="-1">
+      <input type="hidden" id="note_type" name="note_type" value="note">
+      <textarea id="note" name="note" rows="5" cols="33">{{note}}</textarea>
+      <input type="submit" value="Add">
+    </form>
+    <hr>
+    <form id="selection" name="todo" method="POST" action="/bnote/add">
+      <select id="note" name="note">
+        <option value="禁酒">禁酒</option>
+        <option value="腕立て伏せ10回">腕立て伏せ10回</option>
+        <option value="スクワット10回">スクワット10回</option>
+      </select>
+      <input type="submit" value="Add">
+      <input type="hidden" id="note_id" name="note_id" value="-1">
+      <input type="hidden" id="note_type" name="note_type" value="action">
+    </form>
+    <hr>
+    <a href="/bnote/list">today</a>/
+    <a href="/bnote/list-all">all</a>
+  </body>
+</html>
