@@ -8,10 +8,9 @@
     <table>
       <tr><th>#</th><th>Note</th><th>Date</th><th>Type</th><tr>
         %for item in notes:
-      <tr><td><a href="/bnote/edit/{{item['id']}}">{{item['id']}}</a></td><td>{{item['note']}}</td><td>{{item['date']}}</td><td>{{item['type']}}</td><tr>
+      <tr><td id="subject"><a href="/bnote/edit/{{item['id']}}">{{item['id']}}</a></td><td>{{item['note']}}</td><td>{{item['date']}}</td><td>{{item['type']}}</td><tr>
         %end
     </table>
-    <hr>
     <a href="/bnote/">New</a>
   </body>
 </html>
