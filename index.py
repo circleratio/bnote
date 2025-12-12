@@ -66,6 +66,7 @@ def get_list_all():
     c = conn.cursor()
     c.execute("SELECT * FROM notes;")
     notes = c.fetchall()
+    c.close()
     conn.close()
     return template("list", notes=notes)
 
@@ -79,6 +80,7 @@ def get_list_today():
     c = conn.cursor()
     c.execute("SELECT * FROM notes WHERE DATE(date) = ?;", (pat,))
     notes = c.fetchall()
+    c.close()
     conn.close()
     return template("list", notes=notes)
 
@@ -97,6 +99,7 @@ def get_list_by_date(date_str):
     else:
         c.execute("SELECT * FROM notes;")
     notes = c.fetchall()
+    c.close()
     conn.close()
     return template("list", notes=notes)
 
@@ -107,6 +110,7 @@ def edit_note(item_id):
     c = conn.cursor()
     c.execute("SELECT * FROM notes where id=?;", (item_id,))
     notes = c.fetchall()
+    c.close()
     conn.close()
 
     if len(notes) == 1:
