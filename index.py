@@ -11,8 +11,10 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 db_name = "note.db"
-base_url = "http://localhost:8080"
-# base_url = "/bnote"
+if __name__ == "__main__":
+    base_url = "http://localhost:8080"
+else:
+    base_url = "/bnote"
 
 
 def get_db_connection():
