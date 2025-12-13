@@ -49,7 +49,9 @@ def main():
     subparsers = parser.add_subparsers()
 
     parser_list = subparsers.add_parser("list", help="see `list -h`")
-    parser_list.add_argument("-d", "--date", type=str, help="filter by date (YYYY-MM-DD)")
+    parser_list.add_argument(
+        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)"
+    )
     parser_list.set_defaults(handler=command_list)
 
     parser_add = subparsers.add_parser("add", help="see `add -h`")
