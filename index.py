@@ -21,6 +21,17 @@ def get_db_connection():
     return conn
 
 
+def quote_url(text):
+    url_pattern = r"https?://[\w.?=&#%~/-]+"
+
+    def replace_with_link(match):
+        url = match.group(0)
+        return f'<a href="{url}">{url}</a>'
+
+    linked_text = re.sub(url_pattern, replace_with_link, text)
+    return linked_text
+
+
 @route("/static/<filepath:path>")
 def server_static(filepath):
     return static_file(filepath, root=f"{STATIC_DIR}")
@@ -70,7 +81,7 @@ def get_list_all():
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes, base_url=base_url)
+    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
 
 
 @route("/list")
@@ -84,7 +95,7 @@ def get_list_today():
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes, base_url=base_url)
+    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
 
 
 @route("/list/<date_str>")
@@ -103,7 +114,7 @@ def get_list_by_date(date_str):
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes, base_url=base_url)
+    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
 
 
 @route("/edit/<item_id:int>")
@@ -133,7 +144,7 @@ def delete_note(item_id):
     c.close()
     conn.close()
 
-    return template("list", notes=notes, base_url=base_url)
+    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
 
 
 if __name__ == "__main__":
