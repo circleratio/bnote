@@ -57,7 +57,7 @@ def add_note():
     conn.commit()
     c.close()
     conn.close()
-    return template("edit", item_id=-1, note="")
+    return template("add", item_id=-1, note="")
 
 
 @route("/list-all")
