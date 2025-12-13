@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 # -*- coding:utf-8 -*-
 
-from bottle import request, route, run, template, static_file
-import os
-import sqlite3
 import datetime
+import os
 import re
+import sqlite3
+
+from bottle import request, route, run, static_file, template
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
