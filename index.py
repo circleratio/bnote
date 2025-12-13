@@ -11,6 +11,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 db_name = "note.db"
+base_url = "http://localhost:8080"
+# base_url = "/bnote"
 
 
 def get_db_connection():
@@ -26,12 +28,12 @@ def server_static(filepath):
 
 @route("/")
 def index():
-    return template("new", note="")
+    return template("new", note="", base_url=base_url)
 
 
 @route("/new")
 def new_note():
-    return template("new", note="")
+    return template("new", note="", base_url=base_url)
 
 
 @route("/add", method="POST")
@@ -57,7 +59,7 @@ def add_note():
     conn.commit()
     c.close()
     conn.close()
-    return template("add", item_id=-1, note="")
+    return template("new", item_id=-1, note="", base_url=base_url)
 
 
 @route("/list-all")
@@ -68,7 +70,7 @@ def get_list_all():
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes)
+    return template("list", notes=notes, base_url=base_url)
 
 
 @route("/list")
@@ -82,7 +84,7 @@ def get_list_today():
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes)
+    return template("list", notes=notes, base_url=base_url)
 
 
 @route("/list/<date_str>")
@@ -101,7 +103,7 @@ def get_list_by_date(date_str):
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes)
+    return template("list", notes=notes, base_url=base_url)
 
 
 @route("/edit/<item_id:int>")
@@ -116,7 +118,7 @@ def edit_note(item_id):
     if len(notes) == 1:
         note = notes[0]["note"]
 
-    return template("edit", item_id=item_id, note=note)
+    return template("edit", item_id=item_id, note=note, base_url=base_url)
 
 
 @route("/delete/<item_id:int>")
@@ -131,7 +133,7 @@ def delete_note(item_id):
     c.close()
     conn.close()
 
-    return template("list", notes=notes)
+    return template("list", notes=notes, base_url=base_url)
 
 
 if __name__ == "__main__":

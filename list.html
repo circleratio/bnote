@@ -1,16 +1,16 @@
 <html lang="jp">
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" type="text/css" href="/bnote/static/style.css">
+    <link rel="stylesheet" type="text/css" href="{{base_url}}/static/style.css">
     <title>Note</title>
   </head>
   <body>
     <table>
       <tr><th>#</th><th>Note</th><th>Date</th><th>Type</th><tr>
         %for item in notes:
-      <tr><td id="subject"><a href="/bnote/edit/{{item['id']}}">{{item['id']}}</a></td><td>{{item['note']}}</td><td>{{item['date']}}</td><td>{{item['type']}}</td><tr>
+      <tr><td id="subject"><a href="{{base_url}}/edit/{{item['id']}}">{{item['id']}}</a></td><td>{{item['note']}}</td><td>{{item['date']}}</td><td>{{item['type']}}</td><tr>
         %end
     </table>
-    <a href="/bnote/">New</a>
+    <a href="{{base_url}}/">New</a>
   </body>
 </html>
