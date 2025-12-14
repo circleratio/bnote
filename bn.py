@@ -7,6 +7,7 @@ import datetime
 
 db_name = "note.db"
 
+
 def get_db_connection():
     conn = sqlite3.connect(db_name)
     conn.row_factory = sqlite3.Row
@@ -42,9 +43,11 @@ def exec_query(date, note_type):
 
     return notes
 
+
 def today_str():
     now = datetime.datetime.now()
     return now.strftime("%Y-%m-%d")
+
 
 def command_list(args):
     notes = exec_query(args.date, args.note_type)
@@ -52,16 +55,18 @@ def command_list(args):
         ripped = "".join(i["note"].splitlines())
         print('"{}", "{}", "{}", "{}"'.format(i["id"], i["date"], ripped, i["type"]))
 
+
 def command_markdown(args):
     if args.date == None:
         args.date = today_str()
 
-    notes = exec_query(args.date, 'note')
+    notes = exec_query(args.date, "note")
 
-    print('---\ndate: {}\n---'.format(args.date.replace('-', '.')))
+    print("---\ndate: {}\n---".format(args.date.replace("-", ".")))
     for i in notes:
-        print(f'#\n{i["note"]}\n')
-                
+        print(f"#\n{i['note']}\n")
+
+
 def command_add(args):
     print(args)
 
@@ -90,12 +95,8 @@ def main():
     parser_list.set_defaults(handler=command_list)
 
     parser_md = subparsers.add_parser("md", help="see `list -h`")
-    parser_md.add_argument(
-        "-d", "--date", type=str, help="specify date (YYYY-MM-DD)"
-    )
-    parser_md.add_argument("-t", "--note_type", type=str, help="filter by type")
+    parser_md.add_argument("-d", "--date", type=str, help="specify date (YYYY-MM-DD)")
     parser_md.set_defaults(handler=command_markdown)
-
 
     parser_add = subparsers.add_parser("add", help="see `add -h`")
     parser_add.add_argument("-A", "--all", action="store_true", help="all files")
