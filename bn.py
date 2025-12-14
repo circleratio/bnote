@@ -13,7 +13,7 @@ def get_db_connection():
     return conn
 
 
-def command_list(args):
+def exec_query(args):
     filters = []
     values = []
     conn = get_db_connection()
@@ -37,10 +37,17 @@ def command_list(args):
         c.execute("SELECT * FROM notes;")
 
     notes = c.fetchall()
-    for i in notes:
-        print('"{}", "{}", "{}", "{}"'.format(i["id"], i["date"], i["note"], i["type"]))
     c.close()
     conn.close()
+
+    return notes
+
+
+def command_list(args):
+    notes = exec_query(args)
+    for i in notes:
+        ripped = "".join(i["note"].splitlines())
+        print('"{}", "{}", "{}", "{}"'.format(i["id"], i["date"], ripped, i["type"]))
 
 
 def command_add(args):
