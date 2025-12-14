@@ -4,8 +4,10 @@
 import argparse
 import sqlite3
 import datetime
+import os
 
-db_name = "note.db"
+work_dir = os.path.dirname(os.path.abspath(__file__))
+db_name = f"{work_dir}/note.db"
 
 
 def get_db_connection():
