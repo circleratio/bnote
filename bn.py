@@ -19,14 +19,14 @@ def command_list(args):
     conn = get_db_connection()
 
     if args.date:
-        filters.append('DATE(date) = ?')
+        filters.append("DATE(date) = ?")
         values.append(args.date)
     if args.note_type:
-        filters.append('type = ?')
+        filters.append("type = ?")
         values.append(args.note_type)
 
     query = "SELECT * FROM notes"
-    
+
     if filters:
         query += " WHERE " + " AND ".join(filters)
 
@@ -38,7 +38,7 @@ def command_list(args):
 
     notes = c.fetchall()
     for i in notes:
-        print("{}, {}, {}, {}".format(i["id"], i["date"], i["note"], i["type"]))
+        print('"{}", "{}", "{}", "{}"'.format(i["id"], i["date"], i["note"], i["type"]))
     c.close()
     conn.close()
 
@@ -65,9 +65,9 @@ def main():
 
     parser_list = subparsers.add_parser("list", help="see `list -h`")
     parser_list.add_argument(
-        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)")
-    parser_list.add_argument(
-        "-t", "--note_type", type=str, help="filter by type")
+        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)"
+    )
+    parser_list.add_argument("-t", "--note_type", type=str, help="filter by type")
     parser_list.set_defaults(handler=command_list)
 
     parser_add = subparsers.add_parser("add", help="see `add -h`")
