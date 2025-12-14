@@ -14,10 +14,25 @@ def get_db_connection():
 
 
 def command_list(args):
+    filters = []
+    values = []
     conn = get_db_connection()
-    c = conn.cursor()
+
     if args.date:
-        c.execute("SELECT * FROM notes WHERE DATE(date) = ?;", (args.date,))
+        filters.append('DATE(date) = ?')
+        values.append(args.date)
+    if args.note_type:
+        filters.append('type = ?')
+        values.append(args.note_type)
+
+    query = "SELECT * FROM notes"
+    
+    if filters:
+        query += " WHERE " + " AND ".join(filters)
+
+    c = conn.cursor()
+    if filters:
+        c.execute(query, tuple(values))
     else:
         c.execute("SELECT * FROM notes;")
 
@@ -50,8 +65,9 @@ def main():
 
     parser_list = subparsers.add_parser("list", help="see `list -h`")
     parser_list.add_argument(
-        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)"
-    )
+        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)")
+    parser_list.add_argument(
+        "-t", "--note_type", type=str, help="filter by type")
     parser_list.set_defaults(handler=command_list)
 
     parser_add = subparsers.add_parser("add", help="see `add -h`")
