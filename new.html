@@ -14,9 +14,11 @@
     <hr>
     <form id="selection" name="todo" method="POST" action="{{base_url}}/add">
       <select id="note" name="note">
-        <option value="禁酒">禁酒</option>
-        <option value="腕立て伏せ10回">腕立て伏せ10回</option>
+        <option value="腕立て伏せ10回" selected>腕立て伏せ10回</option>
         <option value="スクワット10回">スクワット10回</option>
+        <option value="腹筋10回">腹筋10回</option>
+        <option value="ウォーキング2km">ウォーキング2km</option>
+        <option value="禁酒">禁酒</option>
       </select>
       <input type="submit" value="Add">
       <input type="hidden" id="note_id" name="note_id" value="-1">
