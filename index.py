@@ -53,6 +53,7 @@ def new_note():
 @route("/add", method="POST")
 def add_note():
     note = request.forms.getunicode("note")
+    note = note.replace("\r", "")
     note_id = int(request.forms.getunicode("note_id"))
     note_type = request.forms.getunicode("note_type")
     now = datetime.datetime.now()
