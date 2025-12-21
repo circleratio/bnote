@@ -5,6 +5,7 @@ import argparse
 import sqlite3
 import datetime
 import os
+import re
 
 work_dir = os.path.dirname(os.path.abspath(__file__))
 db_name = f"{work_dir}/note.db"
@@ -22,6 +23,10 @@ def exec_query(date, note_type):
     conn = get_db_connection()
 
     if date:
+        m = re.match('(\d{4})(\d{2})(\d{2})', date)
+        if m:
+            date = '{}-{}-{}'.format(m.group(1), m.group(2), m.group(3))
+        
         filters.append("DATE(date) = ?")
         values.append(date)
     if note_type:
