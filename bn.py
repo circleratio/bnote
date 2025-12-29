@@ -23,7 +23,7 @@ def exec_query(date, note_type):
     conn = get_db_connection()
 
     if date:
-        m = re.match('(\d{4})(\d{2})(\d{2})', date)
+        m = re.match(r'(\d{4})(\d{2})(\d{2})', date)
         if m:
             date = '{}-{}-{}'.format(m.group(1), m.group(2), m.group(3))
         
