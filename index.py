@@ -144,7 +144,7 @@ def get_list_by_date(date_str):
         base_url=base_url,
         formatter=quote_url,
         prev_link=None,
-        next=None,
+        next_link=None,
     )
 
 
