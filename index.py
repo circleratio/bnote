@@ -2,6 +2,7 @@
 # -*- coding:utf-8 -*-
 
 import datetime
+from dateutil.relativedelta import relativedelta
 import os
 import re
 import sqlite3
@@ -85,13 +86,25 @@ def get_list_all():
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
+    return template(
+        "list",
+        notes=notes,
+        base_url=base_url,
+        formatter=quote_url,
+        prev_link=None,
+        next=None,
+    )
 
 
 @route("/list")
 def get_list_today():
-    now = datetime.datetime.now()
-    pat = now.strftime("%Y-%m-%d")
+    today = datetime.datetime.now()
+    pat = today.strftime("%Y-%m-%d")
+
+    yesterday = today + relativedelta(days=-1)
+    tomorrow = today + relativedelta(days=+1)
+    yesterday_s = yesterday.strftime("%Y%m%d")
+    tomorrow_s = tomorrow.strftime("%Y%m%d")
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -99,7 +112,14 @@ def get_list_today():
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
+    return template(
+        "list",
+        notes=notes,
+        base_url=base_url,
+        formatter=quote_url,
+        prev_link=yesterday_s,
+        next_link=tomorrow_s,
+    )
 
 
 @route("/list/<date_str>")
@@ -118,7 +138,14 @@ def get_list_by_date(date_str):
     notes = c.fetchall()
     c.close()
     conn.close()
-    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
+    return template(
+        "list",
+        notes=notes,
+        base_url=base_url,
+        formatter=quote_url,
+        prev_link=None,
+        next=None,
+    )
 
 
 @route("/edit/<item_id:int>")
@@ -148,7 +175,14 @@ def delete_note(item_id):
     c.close()
     conn.close()
 
-    return template("list", notes=notes, base_url=base_url, formatter=quote_url)
+    return template(
+        "list",
+        notes=notes,
+        base_url=base_url,
+        formatter=quote_url,
+        prev_link=None,
+        next=None,
+    )
 
 
 if __name__ == "__main__":

@@ -12,5 +12,11 @@
         %end
     </table>
     <a href="{{base_url}}/">New</a>
+    %if prev_link:
+    <a href="{{base_url}}/list/{{prev_link}}">/Yesterday</a>
+    %end
+    %if next_link:
+    <a href="{{base_url}}/list/{{next_link}}">/Tomorrow</a>
+    %end
   </body>
 </html>
