@@ -23,10 +23,10 @@ def exec_query(date, note_type):
     conn = get_db_connection()
 
     if date:
-        m = re.match(r'(\d{4})(\d{2})(\d{2})', date)
+        m = re.match(r"(\d{4})(\d{2})(\d{2})", date)
         if m:
-            date = '{}-{}-{}'.format(m.group(1), m.group(2), m.group(3))
-        
+            date = "{}-{}-{}".format(m.group(1), m.group(2), m.group(3))
+
         filters.append("DATE(date) = ?")
         values.append(date)
     if note_type:
@@ -64,7 +64,7 @@ def command_list(args):
 
 
 def command_markdown(args):
-    if args.date == None:
+    if args.date is None:
         args.date = today_str()
 
     notes = exec_query(args.date, "note")
@@ -87,7 +87,7 @@ def command_delete(args):
 
 
 def command_help(args):
-    print(parser.parse_args([args.command, "--help"]))
+    print(args)
 
 
 def main():
