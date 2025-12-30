@@ -114,7 +114,7 @@ def get_list_by_date(date_str):
         pat = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
         c.execute("SELECT * FROM notes WHERE DATE(date) = ?;", (pat,))
     else:
-        c.execute("SELECT * FROM notes;")
+        return template("404", base_url=base_url)
     notes = c.fetchall()
     c.close()
     conn.close()
