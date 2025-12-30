@@ -2,12 +2,12 @@
 # -*- coding:utf-8 -*-
 
 import datetime
-from dateutil.relativedelta import relativedelta
 import os
 import re
 import sqlite3
 
 from bottle import request, route, run, static_file, template
+from dateutil.relativedelta import relativedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -92,7 +92,7 @@ def get_list_all():
         base_url=base_url,
         formatter=quote_url,
         prev_link=None,
-        next=None,
+        next_link=None,
     )
 
 
@@ -181,7 +181,7 @@ def delete_note(item_id):
         base_url=base_url,
         formatter=quote_url,
         prev_link=None,
-        next=None,
+        next_link=None,
     )
 
 

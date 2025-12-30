@@ -2,10 +2,10 @@
 # -*- coding:utf-8 -*-
 
 import argparse
-import sqlite3
 import datetime
 import os
 import re
+import sqlite3
 
 work_dir = os.path.dirname(os.path.abspath(__file__))
 db_name = f"{work_dir}/note.db"
