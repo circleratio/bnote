@@ -95,7 +95,10 @@ def main():
 
     parser_list = subparsers.add_parser("list", help="see `list -h`")
     parser_list.add_argument(
-        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)",
+        "-d",
+        "--date",
+        type=str,
+        help="filter by date (YYYY-MM-DD)",
     )
     parser_list.add_argument("-t", "--note_type", type=str, help="filter by type")
     parser_list.set_defaults(handler=command_list)

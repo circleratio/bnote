@@ -1,6 +1,5 @@
 #!/usr/bin/python3
-"""A simple note application with Python/bottle.
-"""
+"""A simple note application with Python/bottle."""
 
 import datetime
 import re
@@ -18,6 +17,7 @@ TIMEZONE = "Asia/Tokyo"
 db_name = "note.db"
 base_url = "http://localhost:8080" if __name__ == "__main__" else "/bnote"
 
+
 def _get_db_connection():
     conn = sqlite3.connect(db_name)
     conn.row_factory = sqlite3.Row
@@ -31,7 +31,7 @@ def _quote_url(text: str) -> str:
         url = match.group(0)
         return f'<a href="{url}">{url}</a>'
 
-    return(re.sub(url_pattern, _replace_with_link, text))
+    return re.sub(url_pattern, _replace_with_link, text)
 
 
 def _days_before_and_after(date_str: str) -> list[str, str]:
@@ -40,8 +40,7 @@ def _days_before_and_after(date_str: str) -> list[str, str]:
         year = int(m.group(1))
         month = int(m.group(2))
         day = int(m.group(3))
-        dt = datetime.datetime(year, month, day, 0, 0, 0, 0,
-                               tzinfo=ZoneInfo(TIMEZONE))
+        dt = datetime.datetime(year, month, day, 0, 0, 0, 0, tzinfo=ZoneInfo(TIMEZONE))
 
         day_before = dt + relativedelta(days=-1)
         day_after = dt + relativedelta(days=+1)
@@ -194,7 +193,7 @@ def edit_note(item_id: int) -> str:
 
 
 @route("/delete/<item_id:int>")
-def delete_note(item_id :int) -> None:
+def delete_note(item_id: int) -> None:
     """Delete a note.
 
     Args:
@@ -214,5 +213,4 @@ def delete_note(item_id :int) -> None:
 
 
 if __name__ == "__main__":
-    #run(host="localhost", port=8080, debug=True)
-    print(get_list_today())
+    run(host="localhost", port=8080, debug=True)
