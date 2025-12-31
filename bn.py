@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# -*- coding:utf-8 -*-
 
 import argparse
 import datetime
@@ -25,7 +24,7 @@ def exec_query(date, note_type):
     if date:
         m = re.match(r"(\d{4})(\d{2})(\d{2})", date)
         if m:
-            date = "{}-{}-{}".format(m.group(1), m.group(2), m.group(3))
+            date = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
 
         filters.append("DATE(date) = ?")
         values.append(date)
@@ -96,7 +95,7 @@ def main():
 
     parser_list = subparsers.add_parser("list", help="see `list -h`")
     parser_list.add_argument(
-        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)"
+        "-d", "--date", type=str, help="filter by date (YYYY-MM-DD)",
     )
     parser_list.add_argument("-t", "--note_type", type=str, help="filter by type")
     parser_list.set_defaults(handler=command_list)
