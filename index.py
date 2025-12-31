@@ -6,7 +6,7 @@ import os
 import re
 import sqlite3
 
-from bottle import request, route, run, static_file, template
+from bottle import request, route, run, static_file, template, redirect
 from dateutil.relativedelta import relativedelta
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +34,24 @@ def quote_url(text):
 
     linked_text = re.sub(url_pattern, replace_with_link, text)
     return linked_text
+
+
+def days_before_and_after(date_str):
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_str)
+    if m:
+        year = int(m.group(1))
+        month = int(m.group(2))
+        day = int(m.group(3))
+        dt = datetime.date(year, month, day)
+
+        day_before = dt + relativedelta(days=-1)
+        day_after = dt + relativedelta(days=+1)
+        day_before_s = day_before.strftime("%Y-%m-%d")
+        day_after_s = day_after.strftime("%Y-%m-%d")
+
+        return (day_before_s, day_after_s)
+    else:
+        return (None, None)
 
 
 @route("/static/<filepath:path>")
@@ -101,10 +119,7 @@ def get_list_today():
     today = datetime.datetime.now()
     pat = today.strftime("%Y-%m-%d")
 
-    yesterday = today + relativedelta(days=-1)
-    tomorrow = today + relativedelta(days=+1)
-    yesterday_s = yesterday.strftime("%Y%m%d")
-    tomorrow_s = tomorrow.strftime("%Y%m%d")
+    prev_link, next_link = days_before_and_after(pat)
 
     conn = get_db_connection()
     c = conn.cursor()
@@ -117,24 +132,23 @@ def get_list_today():
         notes=notes,
         base_url=base_url,
         formatter=quote_url,
-        prev_link=yesterday_s,
-        next_link=tomorrow_s,
+        prev_link=prev_link,
+        next_link=next_link,
     )
 
 
 @route("/list/<date_str>")
 def get_list_by_date(date_str):
-    print(date_str)
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_str)
+    if m is None:
+        return template("404", base_url=base_url)
+
+    prev_link, next_link = days_before_and_after(date_str)
 
     conn = get_db_connection()
     c = conn.cursor()
+    c.execute("SELECT * FROM notes WHERE DATE(date) = ?;", (date_str,))
 
-    m = re.match(r"(\d{4})(\d{2})(\d{2})", date_str)
-    if m:
-        pat = f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
-        c.execute("SELECT * FROM notes WHERE DATE(date) = ?;", (pat,))
-    else:
-        return template("404", base_url=base_url)
     notes = c.fetchall()
     c.close()
     conn.close()
@@ -143,8 +157,8 @@ def get_list_by_date(date_str):
         notes=notes,
         base_url=base_url,
         formatter=quote_url,
-        prev_link=None,
-        next_link=None,
+        prev_link=prev_link,
+        next_link=next_link,
     )
 
 
@@ -167,22 +181,14 @@ def edit_note(item_id):
 def delete_note(item_id):
     conn = get_db_connection()
     c = conn.cursor()
+
     c.execute("DELETE FROM notes where id=?;", (item_id,))
     conn.commit()
 
-    c.execute("SELECT * FROM notes;")
-    notes = c.fetchall()
     c.close()
     conn.close()
 
-    return template(
-        "list",
-        notes=notes,
-        base_url=base_url,
-        formatter=quote_url,
-        prev_link=None,
-        next_link=None,
-    )
+    redirect(f"{base_url}/list")
 
 
 if __name__ == "__main__":
