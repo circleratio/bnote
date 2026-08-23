@@ -2,6 +2,7 @@
 """A simple note application with Python/bottle."""
 
 import datetime
+import html
 import re
 import sqlite3
 from pathlib import Path
@@ -15,7 +16,8 @@ STATIC_DIR = Path(BASE_DIR) / "static"
 TIMEZONE = "Asia/Tokyo"
 
 db_name = "note.db"
-base_url = "http://localhost:8080" if __name__ == "__main__" else "/bnote"
+#base_url = "http://localhost:8080" if __name__ == "__main__" else "/bnote"
+base_url = "https://note.circleratio314.com" if __name__ == "__main__" else "/bnote"
 
 
 def _get_db_connection():
@@ -25,13 +27,14 @@ def _get_db_connection():
 
 
 def _quote_url(text: str) -> str:
-    url_pattern = r"https?://[\w.?=&#%~/-]+"
+    escaped = html.escape(text)
+    url_pattern = r"https?://[\w.?=&;#%~/-]+"
 
     def _replace_with_link(match) -> str:
         url = match.group(0)
         return f'<a href="{url}">{url}</a>'
 
-    return re.sub(url_pattern, _replace_with_link, text)
+    return re.sub(url_pattern, _replace_with_link, escaped)
 
 
 def _days_before_and_after(date_str: str) -> list[str, str]:
@@ -213,4 +216,4 @@ def delete_note(item_id: int) -> None:
 
 
 if __name__ == "__main__":
-    run(host="localhost", port=8080, debug=True)
+    run(host="localhost", port=8080, debug=False)

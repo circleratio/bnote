@@ -1,0 +1,13 @@
+[Unit]
+Description=Notebook management service
+After=network.target
+
+[Service]
+Type=oneshot
+User=<USER>
+Group=<USER>
+ExecStart=<PROJECT_ROOT>/start.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
