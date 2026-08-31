@@ -13,10 +13,13 @@
     </table>
     <a href="{{base_url}}/">New</a>
     %if prev_link:
-    <a href="{{base_url}}/list/{{prev_link}}">/Prev</a>
+    <a href="{{prev_link}}">/Prev</a>
     %end
     %if next_link:
-    <a href="{{base_url}}/list/{{next_link}}">/Next</a>
+    <a href="{{next_link}}">/Next</a>
+    %end
+    %if total_pages:
+    <span id="pagenum">{{page}} / {{total_pages}}</span>
     %end
   </body>
 </html>

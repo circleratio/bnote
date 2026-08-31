@@ -16,6 +16,7 @@ STATIC_DIR = Path(BASE_DIR) / "static"
 TIMEZONE = "Asia/Tokyo"
 
 db_name = "note.db"
+PAGE_SIZE = 50
 #base_url = "http://localhost:8080" if __name__ == "__main__" else "/bnote"
 base_url = "https://note.circleratio314.com" if __name__ == "__main__" else "/bnote"
 
@@ -102,20 +103,37 @@ def add_note() -> str:
 
 @route("/list-all")
 def get_list_all() -> str:
-    """Get a list of all notes."""
+    """Get a paginated list of all notes, newest first."""
+    try:
+        page = max(1, int(request.query.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+
     conn = _get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT * FROM notes;")
+    total = c.execute("SELECT COUNT(*) FROM notes;").fetchone()[0]
+    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = min(page, total_pages)
+    offset = (page - 1) * PAGE_SIZE
+    c.execute(
+        "SELECT * FROM notes ORDER BY id DESC LIMIT ? OFFSET ?;",
+        (PAGE_SIZE, offset),
+    )
     notes = c.fetchall()
     c.close()
     conn.close()
+
+    prev_link = f"{base_url}/list-all?page={page - 1}" if page > 1 else None
+    next_link = f"{base_url}/list-all?page={page + 1}" if page < total_pages else None
     return template(
         "list",
         notes=notes,
         base_url=base_url,
         formatter=_quote_url,
-        prev_link=None,
-        next_link=None,
+        prev_link=prev_link,
+        next_link=next_link,
+        page=page,
+        total_pages=total_pages,
     )
 
 
@@ -125,7 +143,7 @@ def get_list_today() -> str:
     today = datetime.datetime.now(ZoneInfo(TIMEZONE))
     pat = today.strftime("%Y-%m-%d")
 
-    prev_link, next_link = _days_before_and_after(pat)
+    prev_date, next_date = _days_before_and_after(pat)
 
     conn = _get_db_connection()
     c = conn.cursor()
@@ -138,8 +156,10 @@ def get_list_today() -> str:
         notes=notes,
         base_url=base_url,
         formatter=_quote_url,
-        prev_link=prev_link,
-        next_link=next_link,
+        prev_link=f"{base_url}/list/{prev_date}" if prev_date else None,
+        next_link=f"{base_url}/list/{next_date}" if next_date else None,
+        page=None,
+        total_pages=None,
     )
 
 
@@ -155,7 +175,7 @@ def get_list_by_date(date_str: str) -> str:
     if m is None:
         return template("404", base_url=base_url)
 
-    prev_link, next_link = _days_before_and_after(date_str)
+    prev_date, next_date = _days_before_and_after(date_str)
 
     conn = _get_db_connection()
     c = conn.cursor()
@@ -169,8 +189,10 @@ def get_list_by_date(date_str: str) -> str:
         notes=notes,
         base_url=base_url,
         formatter=_quote_url,
-        prev_link=prev_link,
-        next_link=next_link,
+        prev_link=f"{base_url}/list/{prev_date}" if prev_date else None,
+        next_link=f"{base_url}/list/{next_date}" if next_date else None,
+        page=None,
+        total_pages=None,
     )
 
 
