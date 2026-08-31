@@ -26,6 +26,11 @@
       <input type="hidden" id="note_type" name="note_type" value="action">
     </form>
     <hr>
+    <form name="search" method="GET" action="{{base_url}}/search">
+      <input type="text" id="q" name="q" placeholder="keyword">
+      <input type="submit" value="Search">
+    </form>
+    <hr>
     <a href="{{base_url}}/list">today</a>/
     <a href="{{base_url}}/list-all">all</a>
   </body>

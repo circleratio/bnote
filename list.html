@@ -12,6 +12,10 @@
         %end
     </table>
     <a href="{{base_url}}/">New</a>
+    <form name="search" method="GET" action="{{base_url}}/search">
+      <input type="text" id="q" name="q" value="{{get('q', '')}}" placeholder="keyword">
+      <input type="submit" value="Search">
+    </form>
     %if prev_link:
     <a href="{{prev_link}}">/Prev</a>
     %end

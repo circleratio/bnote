@@ -6,6 +6,7 @@ import html
 import re
 import sqlite3
 from pathlib import Path
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from bottle import redirect, request, route, run, static_file, template
@@ -134,6 +135,70 @@ def get_list_all() -> str:
         next_link=next_link,
         page=page,
         total_pages=total_pages,
+    )
+
+
+@route("/search")
+def search_notes() -> str:
+    """Search notes whose body contains the keyword, newest first, paginated."""
+    q = request.query.getunicode("q", "").strip()
+    try:
+        page = max(1, int(request.query.get("page", 1)))
+    except (TypeError, ValueError):
+        page = 1
+
+    if not q:
+        return template(
+            "list",
+            notes=[],
+            base_url=base_url,
+            formatter=_quote_url,
+            prev_link=None,
+            next_link=None,
+            page=None,
+            total_pages=None,
+            q="",
+        )
+
+    # Escape LIKE wildcards so the keyword is matched literally.
+    escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    like = f"%{escaped}%"
+
+    conn = _get_db_connection()
+    c = conn.cursor()
+    total = c.execute(
+        "SELECT COUNT(*) FROM notes WHERE note LIKE ? ESCAPE '\\';",
+        (like,),
+    ).fetchone()[0]
+    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = min(page, total_pages)
+    offset = (page - 1) * PAGE_SIZE
+    c.execute(
+        "SELECT * FROM notes WHERE note LIKE ? ESCAPE '\\' "
+        "ORDER BY id DESC LIMIT ? OFFSET ?;",
+        (like, PAGE_SIZE, offset),
+    )
+    notes = c.fetchall()
+    c.close()
+    conn.close()
+
+    qs = quote(q)
+    prev_link = (
+        f"{base_url}/search?q={qs}&page={page - 1}" if page > 1 else None
+    )
+    next_link = (
+        f"{base_url}/search?q={qs}&page={page + 1}" if page < total_pages else None
+    )
+    return template(
+        "list",
+        notes=notes,
+        base_url=base_url,
+        formatter=_quote_url,
+        prev_link=prev_link,
+        next_link=next_link,
+        page=page,
+        total_pages=total_pages,
+        q=q,
     )
 
 
