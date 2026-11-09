@@ -6,18 +6,41 @@ import html
 import re
 import sqlite3
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
 
-from bottle import redirect, request, route, run, static_file, template
+from bottle import (
+    HTTPResponse,
+    abort,
+    hook,
+    install,
+    redirect,
+    request,
+    response,
+    route,
+    run,
+    static_file,
+    template,
+)
 from dateutil.relativedelta import relativedelta
 
 BASE_DIR = str(Path(__file__).resolve().parent)
 STATIC_DIR = Path(BASE_DIR) / "static"
 TIMEZONE = "Asia/Tokyo"
 
-db_name = "note.db"
+db_name = str(Path(BASE_DIR) / "note.db")
 PAGE_SIZE = 50
+NOTE_TYPES = ("note", "action")
+SECURITY_HEADERS = {
+    "X-Frame-Options": "DENY",
+    "Content-Security-Policy": (
+        "default-src 'self'; frame-ancestors 'none'; form-action 'self'"
+    ),
+    # "no-referrer" would make browsers send "Origin: null" on POST,
+    # which breaks the CSRF check below.
+    "Referrer-Policy": "same-origin",
+    "X-Content-Type-Options": "nosniff",
+}
 #base_url = "http://localhost:8080" if __name__ == "__main__" else "/bnote"
 base_url = "https://note.circleratio314.com" if __name__ == "__main__" else "/bnote"
 
@@ -34,9 +57,62 @@ def _quote_url(text: str) -> str:
 
     def _replace_with_link(match) -> str:
         url = match.group(0)
-        return f'<a href="{url}">{url}</a>'
+        return f'<a href="{url}" rel="noreferrer noopener">{url}</a>'
 
     return re.sub(url_pattern, _replace_with_link, escaped)
+
+
+def _is_valid_date(date_str: str) -> bool:
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_str) is None:
+        return False
+    try:
+        datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return False
+    return True
+
+
+def _not_found() -> str:
+    response.status = 404
+    return template("404", base_url=base_url)
+
+
+def _set_security_headers(resp) -> None:
+    for name, value in SECURITY_HEADERS.items():
+        resp.set_header(name, value)
+
+
+def _security_headers_plugin(callback):
+    """Add security headers to every response, including redirects and errors."""
+
+    def wrapper(*args, **kwargs):
+        try:
+            body = callback(*args, **kwargs)
+        except HTTPResponse as resp:
+            _set_security_headers(resp)
+            raise
+        _set_security_headers(body if isinstance(body, HTTPResponse) else response)
+        return body
+
+    return wrapper
+
+
+install(_security_headers_plugin)
+
+
+@hook("before_request")
+def _check_same_origin() -> None:
+    """Reject cross-site POST requests (CSRF protection).
+
+    The host in Origin (or Referer as a fallback) must match the request host.
+    Behind a reverse proxy, the proxy must pass the original Host header or
+    X-Forwarded-Host.
+    """
+    if request.method != "POST":
+        return
+    source = request.headers.get("Origin") or request.headers.get("Referer")
+    if not source or urlsplit(source).netloc != request.urlparts.netloc:
+        abort(403, "Cross-site request rejected.")
 
 
 def _days_before_and_after(date_str: str) -> list[str, str]:
@@ -78,9 +154,16 @@ def new_note() -> str:
 def add_note() -> str:
     """Add a new note."""
     note = request.forms.getunicode("note")
+    if note is None:
+        abort(400, "Missing note.")
     note = note.replace("\r", "")
-    note_id = int(request.forms.getunicode("note_id"))
+    try:
+        note_id = int(request.forms.getunicode("note_id"))
+    except (TypeError, ValueError):
+        abort(400, "Invalid note_id.")
     note_type = request.forms.getunicode("note_type")
+    if note_type not in NOTE_TYPES:
+        abort(400, "Invalid note_type.")
     now = datetime.datetime.now(ZoneInfo(TIMEZONE))
     now_s = now.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -236,9 +319,8 @@ def get_list_by_date(date_str: str) -> str:
         date_str: a string in the format YYYY-MM-DD
 
     """
-    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", date_str)
-    if m is None:
-        return template("404", base_url=base_url)
+    if not _is_valid_date(date_str):
+        return _not_found()
 
     prev_date, next_date = _days_before_and_after(date_str)
 
@@ -276,13 +358,14 @@ def edit_note(item_id: int) -> str:
     c.close()
     conn.close()
 
-    if len(notes) == 1:
-        note = notes[0]["note"]
+    if len(notes) != 1:
+        return _not_found()
+    note = notes[0]["note"]
 
     return template("edit", item_id=item_id, note=note, base_url=base_url)
 
 
-@route("/delete/<item_id:int>")
+@route("/delete/<item_id:int>", method="POST")
 def delete_note(item_id: int) -> None:
     """Delete a note.
 

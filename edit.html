@@ -11,7 +11,9 @@
       <textarea id="note" name="note" rows="5" cols="33">{{note}}</textarea>
       <input type="submit" value="Update">
     </form>
-    <button onclick="location.href='{{base_url}}/delete/{{item_id}}'">Del</button>
+    <form name="delete" method="POST" action="{{base_url}}/delete/{{item_id}}">
+      <input type="submit" value="Del">
+    </form>
     <hr>
     <a href="{{base_url}}/list">Today</a> / <a href="{{base_url}}/list-all">All</a>
   </body>

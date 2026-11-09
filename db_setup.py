@@ -1,7 +1,9 @@
 import datetime
+import os
 import sqlite3
+from pathlib import Path
 
-dbname = "note.db"
+dbname = str(Path(__file__).resolve().parent / "note.db")
 
 conn = sqlite3.connect(dbname)
 c = conn.cursor()
@@ -17,3 +19,6 @@ c.execute(
 
 conn.commit()
 conn.close()
+
+# Restrict the database file to the owner only.
+os.chmod(dbname, 0o600)

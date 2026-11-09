@@ -59,13 +59,46 @@ Python の軽量 Web フレームワーク [Bottle](https://bottlepy.org/) で�
    pip install .
    ```
 
-4. データベースを初期化します。`note.db` が作成され、`notes` テーブルとサンプル行が 1 件追加されます。
+4. データベースを初期化します。スクリプトと同じディレクトリに `note.db` が作成され、`notes` テーブルとサンプル行が 1 件追加されます。`note.db` のパーミッションは所有者のみ読み書き可（`600`）に設定されます。
 
    ```bash
    python3 db_setup.py
    ```
 
-   > すでに `note.db` が存在する場合、この手順を実行するとサンプル行が追加されます。既存 DB をそのまま使う場合は実行不要です。
+   > すでに `note.db` が存在する場合、この手順を実行するとサンプル行が追加されます。既存 DB をそのまま使う場合は実行不要です。その場合も `chmod 600 note.db` でパーミッションを絞ってください。
+
+## セキュリティ上の前提
+
+### 認証はリバースプロキシで行う
+
+bnote 自体はユーザー認証の機能を持ちません。**インターネットなど信頼できないネットワークに公開する場合は、必ずリバースプロキシ（nginx、Apache など）を前段に置き、そこで認証（Basic 認証、OAuth2 Proxy、クライアント証明書など）を行ってください。** 認証なしで公開すると、誰でもメモを閲覧・改ざん・削除できる状態になります。
+
+- アプリ（Bottle 開発サーバー）は `localhost:8080` で待ち受けます。外部から直接アクセスできないようにし、必ずプロキシを経由させてください。
+- プロキシと利用者の間の通信は HTTPS にしてください。
+
+### プロキシに必要な設定
+
+POST リクエスト（`/add`、`/delete/<id>`）では CSRF 対策として、`Origin` ヘッダー（ない場合は `Referer`）のホストがリクエスト先のホストと一致するかを検証し、一致しなければ `403` を返します。アプリは `X-Forwarded-Host` または `Host` ヘッダーからリクエスト先ホストを判定するので、プロキシでは元のホスト名を渡してください。
+
+nginx の例:
+
+```nginx
+location / {
+    auth_basic           "bnote";
+    auth_basic_user_file /etc/nginx/.htpasswd;
+    proxy_pass           http://127.0.0.1:8080;
+    proxy_set_header     Host $host;
+}
+```
+
+Apache（mod_proxy）は `X-Forwarded-Host` を自動で付与するので、追加の設定は不要です。
+
+### アプリ側で行っている対策
+
+- CSRF 対策: 上記の `Origin` / `Referer` 検証を行い、削除は POST のみ受け付けます。
+- セキュリティヘッダー: すべての応答に `X-Frame-Options: DENY`、`Content-Security-Policy`（`default-src 'self'; frame-ancestors 'none'; form-action 'self'`）、`Referrer-Policy: same-origin`、`X-Content-Type-Options: nosniff` を付与します。
+- メモ本文中の自動リンクには `rel="noreferrer noopener"` を付与し、検索語などを含む URL がリンク先に送られないようにしています。
+- 入力値を検証し、不正な値には `400`、存在しない日付やメモには `404` を返します。
 
 ## サービスの起動方法
 
@@ -154,4 +187,4 @@ python3 bn.py md -d 2026-09-01
 | GET | `/list-all?page=N` | 全メモ一覧（ページネーション） |
 | GET | `/search?q=<keyword>&page=N` | キーワード検索 |
 | GET | `/edit/<id>` | メモの編集画面 |
-| GET | `/delete/<id>` | メモの削除 |
+| POST | `/delete/<id>` | メモの削除 |
