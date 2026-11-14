@@ -10,10 +10,9 @@ from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
 
 from bottle import (
-    HTTPResponse,
     abort,
+    default_app,
     hook,
-    install,
     redirect,
     request,
     response,
@@ -34,12 +33,15 @@ NOTE_TYPES = ("note", "action")
 SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",
     "Content-Security-Policy": (
-        "default-src 'self'; frame-ancestors 'none'; form-action 'self'"
+        "default-src 'self'; base-uri 'none'; object-src 'none'; "
+        "frame-ancestors 'none'; form-action 'self'"
     ),
     # "no-referrer" would make browsers send "Origin: null" on POST,
     # which breaks the CSRF check below.
     "Referrer-Policy": "same-origin",
     "X-Content-Type-Options": "nosniff",
+    # Browsers ignore this header over plain HTTP, so it is safe to always send.
+    "Strict-Transport-Security": "max-age=31536000",
 }
 #base_url = "http://localhost:8080" if __name__ == "__main__" else "/bnote"
 base_url = "https://note.circleratio314.com" if __name__ == "__main__" else "/bnote"
@@ -77,27 +79,28 @@ def _not_found() -> str:
     return template("404", base_url=base_url)
 
 
-def _set_security_headers(resp) -> None:
-    for name, value in SECURITY_HEADERS.items():
-        resp.set_header(name, value)
+class _SecurityHeadersMiddleware:
+    """Add security headers to every response, including errors.
 
+    Implemented as WSGI middleware because bottle replaces the response
+    headers with those of an HTTPError (404, 403, 405, 500, ...), which drops
+    headers set by hooks or plugins.
+    """
 
-def _security_headers_plugin(callback):
-    """Add security headers to every response, including redirects and errors."""
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
 
-    def wrapper(*args, **kwargs):
-        try:
-            body = callback(*args, **kwargs)
-        except HTTPResponse as resp:
-            _set_security_headers(resp)
-            raise
-        _set_security_headers(body if isinstance(body, HTTPResponse) else response)
-        return body
+    def __call__(self, environ, start_response):
+        def _start_response(status, headers, exc_info=None):
+            present = {name.lower() for name, _ in headers}
+            headers = list(headers) + [
+                (name, value)
+                for name, value in SECURITY_HEADERS.items()
+                if name.lower() not in present
+            ]
+            return start_response(status, headers, exc_info)
 
-    return wrapper
-
-
-install(_security_headers_plugin)
+        return self.wsgi_app(environ, _start_response)
 
 
 @hook("before_request")
@@ -385,5 +388,8 @@ def delete_note(item_id: int) -> None:
     redirect(f"{base_url}/list")
 
 
+app = _SecurityHeadersMiddleware(default_app())
+
+
 if __name__ == "__main__":
-    run(host="localhost", port=8080, debug=False)
+    run(app=app, host="localhost", port=8080, debug=False)

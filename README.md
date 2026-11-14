@@ -96,7 +96,12 @@ Apache（mod_proxy）は `X-Forwarded-Host` を自動で付与するので、追
 ### アプリ側で行っている対策
 
 - CSRF 対策: 上記の `Origin` / `Referer` 検証を行い、削除は POST のみ受け付けます。
-- セキュリティヘッダー: すべての応答に `X-Frame-Options: DENY`、`Content-Security-Policy`（`default-src 'self'; frame-ancestors 'none'; form-action 'self'`）、`Referrer-Policy: same-origin`、`X-Content-Type-Options: nosniff` を付与します。
+- セキュリティヘッダー: エラー応答（403/404/405/500 など）を含むすべての応答に、以下を付与します。WSGI ミドルウェア（`index.app`）で付けているため、起動時や `adapter.wsgi` では `bottle.default_app()` ではなく `index.app` を使ってください。
+  - `X-Frame-Options: DENY`
+  - `Content-Security-Policy: default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'self'`
+  - `Referrer-Policy: same-origin`
+  - `X-Content-Type-Options: nosniff`
+  - `Strict-Transport-Security: max-age=31536000`（HSTS。HTTPS 接続時のみブラウザが有効にします。サブドメインも HTTPS 専用にしてよい場合は、プロキシ側で `includeSubDomains` を付けてください）
 - メモ本文中の自動リンクには `rel="noreferrer noopener"` を付与し、検索語などを含む URL がリンク先に送られないようにしています。
 - 入力値を検証し、不正な値には `400`、存在しない日付やメモには `404` を返します。
 
