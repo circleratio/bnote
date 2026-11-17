@@ -22,7 +22,8 @@ Python の軽量 Web フレームワーク [Bottle](https://bottlepy.org/) で�
 | `db_setup.py` | データベース（`note.db`）の初期化スクリプト |
 | `adapter.wsgi` | WSGI サーバー（Apache mod_wsgi 等）用アダプター |
 | `start.sh` | 開発用の起動スクリプト |
-| `deploy/bnote.service` | systemd ユニットファイルのサンプル |
+| `deploy/bnote.service` | systemd ユニットファイルのサンプル（システム用） |
+| `deploy/bnote.user.service` | systemd ユニットファイルのサンプル（ユーザー権限用） |
 | `*.html` | 画面テンプレート（Bottle SimpleTemplate） |
 | `static/style.css` | スタイルシート |
 
@@ -126,6 +127,27 @@ python3 index.py
 
 ### 本番用（systemd）
 
+どちらの方法でも、事前に「手順」に従って `.venv` に依存パッケージをインストールしておきます。ユニットは `.venv/bin/python` で `index.py` を直接起動します（`Type=simple`）。`start.sh` のようにバックグラウンド（`&`）で起動して終了するスクリプトをユニットから呼ぶと、プロセスが systemd の管理から外れてしまい、異常終了しても自動再起動されず、`systemctl stop` でも止まらなくなるので使わないでください。
+
+#### ユーザー権限で動かす場合
+
+root を使わず、自分のアカウントの systemd（`systemctl --user`）で常駐させます。`deploy/bnote.user.service` はリポジトリが `~/services/bnote` にある前提で書いてあるので、違う場所に置く場合はパスを書き換えてください（`%h` はホームディレクトリに置き換わります）。
+
+```bash
+mkdir -p ~/.config/systemd/user
+cp deploy/bnote.user.service ~/.config/systemd/user/bnote.service
+systemctl --user daemon-reload
+systemctl --user enable --now bnote.service
+sudo loginctl enable-linger $USER   # ログアウト中や OS 起動直後も動かすために必要（初回のみ）
+```
+
+状態の確認は `systemctl --user status bnote.service`、ログの確認は `journalctl --user -u bnote` で行います。
+
+- `[Install]` には `WantedBy=default.target` を指定します。`multi-user.target` はユーザー用の systemd には存在しないので、指定しても自動起動されません。
+- サンドボックス設定（`ProtectSystem` など）は、unprivileged user namespace（一般ユーザーが使える名前空間機能）が有効でないと動きません。名前空間関係のエラーで起動に失敗する場合は、ユニット内のこのブロックを削除してください。`note.db` は `index.py` と同じディレクトリに作られるため、書き込みを許可するディレクトリ（`ReadWritePaths`）はプロジェクトのディレクトリにしています。
+
+#### システムサービスとして動かす場合
+
 `deploy/bnote.service` をひな形として利用します。`<USER>` と `<PROJECT_ROOT>` を環境に合わせて書き換えてください。
 
 ```bash
@@ -157,6 +179,8 @@ Apache の mod_wsgi などから配信する場合は `adapter.wsgi` を利用�
   ```
 
 ### systemd
+
+ユーザー権限で動かしている場合は、以下の `sudo systemctl` を `systemctl --user` に読み替えてください。
 
 ```bash
 sudo systemctl stop bnote.service

@@ -1,13 +1,21 @@
+# systemd system unit for bnote. Replace <USER> and <PROJECT_ROOT>, copy to
+# /etc/systemd/system/bnote.service, then
+#   systemctl daemon-reload && systemctl enable --now bnote
+# To run under your own account without root, use bnote.user.service instead.
+
 [Unit]
-Description=Notebook management service
+Description=bnote note management service
 After=network.target
 
 [Service]
-Type=oneshot
+Type=simple
 User=<USER>
 Group=<USER>
-ExecStart=<PROJECT_ROOT>/start.sh
-RemainAfterExit=yes
+WorkingDirectory=<PROJECT_ROOT>
+ExecStart=<PROJECT_ROOT>/.venv/bin/python index.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target
