@@ -3,6 +3,7 @@
 
 import datetime
 import html
+import os
 import re
 import sqlite3
 from pathlib import Path
@@ -27,7 +28,8 @@ BASE_DIR = str(Path(__file__).resolve().parent)
 STATIC_DIR = Path(BASE_DIR) / "static"
 TIMEZONE = "Asia/Tokyo"
 
-db_name = str(Path(BASE_DIR) / "note.db")
+# The database path can be overridden with BNOTE_DB (e.g. /var/lib/bnote/note.db).
+db_name = os.environ.get("BNOTE_DB", str(Path(BASE_DIR) / "note.db"))
 PAGE_SIZE = 50
 NOTE_TYPES = ("note", "action")
 SECURITY_HEADERS = {

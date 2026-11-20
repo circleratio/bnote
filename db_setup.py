@@ -3,7 +3,8 @@ import os
 import sqlite3
 from pathlib import Path
 
-dbname = str(Path(__file__).resolve().parent / "note.db")
+# The database path can be overridden with BNOTE_DB (e.g. /var/lib/bnote/note.db).
+dbname = os.environ.get("BNOTE_DB", str(Path(__file__).resolve().parent / "note.db"))
 
 conn = sqlite3.connect(dbname)
 c = conn.cursor()

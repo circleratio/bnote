@@ -7,7 +7,8 @@ import re
 import sqlite3
 
 work_dir = os.path.dirname(os.path.abspath(__file__))
-db_name = f"{work_dir}/note.db"
+# The database path can be overridden with BNOTE_DB (e.g. /var/lib/bnote/note.db).
+db_name = os.environ.get("BNOTE_DB", f"{work_dir}/note.db")
 
 
 def get_db_connection():

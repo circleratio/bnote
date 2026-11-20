@@ -22,8 +22,8 @@ Python の軽量 Web フレームワーク [Bottle](https://bottlepy.org/) で�
 | `db_setup.py` | データベース（`note.db`）の初期化スクリプト |
 | `adapter.wsgi` | WSGI サーバー（Apache mod_wsgi 等）用アダプター |
 | `start.sh` | 開発用の起動スクリプト |
-| `deploy/bnote.service` | systemd ユニットファイルのサンプル（システム用） |
-| `deploy/bnote.user.service` | systemd ユニットファイルのサンプル（ユーザー権限用） |
+| `deploy/bnote.service` | systemd ユニットファイル（専用ユーザー `bnote` で動かすシステムサービス用。推奨） |
+| `deploy/bnote.user.service` | systemd ユニットファイルのサンプル（自分のアカウントで動かすユーザーサービス用） |
 | `*.html` | 画面テンプレート（Bottle SimpleTemplate） |
 | `static/style.css` | スタイルシート |
 
@@ -67,6 +67,12 @@ Python の軽量 Web フレームワーク [Bottle](https://bottlepy.org/) で�
    ```
 
    > すでに `note.db` が存在する場合、この手順を実行するとサンプル行が追加されます。既存 DB をそのまま使う場合は実行不要です。その場合も `chmod 600 note.db` でパーミッションを絞ってください。
+
+### 環境変数
+
+| 変数 | 既定値 | 説明 |
+| --- | --- | --- |
+| `BNOTE_DB` | `index.py` と同じディレクトリの `note.db` | データベースファイルのパス。`index.py`・`bn.py`・`db_setup.py` のすべてが参照します。専用ユーザーで動かす構成では `/var/lib/bnote/note.db` を指定します。 |
 
 ## セキュリティ上の前提
 
@@ -127,11 +133,110 @@ python3 index.py
 
 ### 本番用（systemd）
 
-どちらの方法でも、事前に「手順」に従って `.venv` に依存パッケージをインストールしておきます。ユニットは `.venv/bin/python` で `index.py` を直接起動します（`Type=simple`）。`start.sh` のようにバックグラウンド（`&`）で起動して終了するスクリプトをユニットから呼ぶと、プロセスが systemd の管理から外れてしまい、異常終了しても自動再起動されず、`systemctl stop` でも止まらなくなるので使わないでください。
+どちらの方法でも、ユニットは `.venv/bin/python` で `index.py` を直接起動します（`Type=simple`）。`start.sh` のようにバックグラウンド（`&`）で起動して終了するスクリプトをユニットから呼ぶと、プロセスが systemd の管理から外れてしまい、異常終了しても自動再起動されず、`systemctl stop` でも止まらなくなるので使わないでください。
+
+#### 専用ユーザーで動かす場合（推奨）
+
+ログインできない専用のシステムユーザー `bnote` でシステムサービスとして動かします。自分のアカウント（sudo や docker を使えるユーザー）で動かすと、アプリが乗っ取られたときにその権限まで奪われるため、本番ではこの方法を使ってください。
+
+構成は次のとおりです。
+
+| 用途 | 場所 | 所有者・権限 |
+| --- | --- | --- |
+| コード・venv | `/opt/bnote` | `root:root`（サービスからは読み取り専用） |
+| データベース | `/var/lib/bnote/note.db` | `bnote:bnote`（ディレクトリ `700`、ファイル `600`） |
+| ユニット | `/etc/systemd/system/bnote.service` | `root:root` |
+
+DB の場所は環境変数 `BNOTE_DB` でユニットから指定します。`deploy/bnote.service` には、書き込みを `/var/lib/bnote` だけに限る・`/home` を見えなくする・localhost 以外との通信を禁止する、などのサンドボックス設定（プロセスの権限を絞る systemd の機能）が入っています。
+
+##### 新規インストール
+
+```bash
+# 1. Create the dedicated user (no login, no home directory)
+sudo useradd --system --user-group --no-create-home \
+  --home-dir /nonexistent --shell /usr/sbin/nologin bnote
+
+# 2. Deploy the code as root-owned, read-only files
+sudo rsync -a --delete --chown=root:root \
+  --exclude .git --exclude .venv --exclude note.db --exclude '__pycache__' --exclude .ruff_cache \
+  ./ /opt/bnote/
+sudo python3 -m venv /opt/bnote/.venv
+sudo /opt/bnote/.venv/bin/pip install bottle==0.12.23 python-dateutil==2.8.2
+sudo /opt/bnote/.venv/bin/python -m compileall -q /opt/bnote
+
+# 3. Create the database directory and initialize the database
+sudo install -d -o bnote -g bnote -m 700 /var/lib/bnote
+sudo -u bnote BNOTE_DB=/var/lib/bnote/note.db /opt/bnote/.venv/bin/python /opt/bnote/db_setup.py
+
+# 4. Install and start the unit
+sudo cp deploy/bnote.service /etc/systemd/system/bnote.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now bnote.service
+```
+
+- `/opt/bnote` はサービスから書き込めないので、`compileall` で `.pyc`（Python のキャッシュ）を事前に作っておきます。省略しても動作はしますが、起動のたびにコンパイルが行われます。
+- `/var/lib/bnote` はユニットの `StateDirectory=bnote` によって、起動のたびに所有者 `bnote`・権限 `700` に保たれます。
+
+##### ユーザーサービスからの移行
+
+すでに `deploy/bnote.user.service` で動かしている場合は、上の手順 1・2 を行ってから、手順 3 の DB 初期化の代わりに既存の DB を移します。
+
+```bash
+# Stop the old user service (port 8080 must be free)
+systemctl --user disable --now bnote.service
+
+# Back up the database and check that no -journal / -wal files are left
+cp -p note.db ~/note.db.bak-$(date +%Y%m%d)
+ls note.db*
+
+# Move the database to the new location
+sudo install -d -o bnote -g bnote -m 700 /var/lib/bnote
+sudo install -o bnote -g bnote -m 600 note.db /var/lib/bnote/note.db
+```
+
+続けて手順 4 でユニットをインストールして起動し、問題なく動くことを確認したら古いユニットを削除します。
+
+```bash
+rm ~/.config/systemd/user/bnote.service
+systemctl --user daemon-reload
+```
+
+- 他にユーザーサービスがなければ `sudo loginctl disable-linger $USER` で linger（ログアウト中もユーザーサービスを動かし続ける設定）を無効にできます。他のユーザーサービスが動いている場合は無効にしないでください。
+- プロジェクトディレクトリに残った古い `note.db` は、しばらく運用して問題がないことを確かめてから削除してください。
+
+元に戻す場合は、`sudo systemctl disable --now bnote.service` で止めてから、古い `note.db` とユーザーユニットを元に戻して `systemctl --user enable --now bnote.service` を実行します。
+
+##### 動作確認
+
+```bash
+systemctl status bnote.service
+ps -o user,pid,args -C python               # The process must run as bnote
+ss -ltnp | grep 8080                        # Listening on 127.0.0.1:8080
+journalctl -u bnote -f                      # Follow the log while using the app
+systemd-analyze security bnote.service      # Sandbox exposure score (for reference)
+```
+
+##### コードの更新
+
+開発用のディレクトリで変更をコミットしたら、`/opt/bnote` に反映してサービスを再起動します。依存パッケージを変えた場合は `pip install` もやり直してください。
+
+```bash
+sudo rsync -a --delete --chown=root:root \
+  --exclude .git --exclude .venv --exclude note.db --exclude '__pycache__' --exclude .ruff_cache \
+  ./ /opt/bnote/
+sudo /opt/bnote/.venv/bin/python -m compileall -q /opt/bnote
+sudo systemctl restart bnote.service
+```
+
+`--delete` を付けているので、`/opt/bnote` にある、除外対象以外の余分なファイルは削除されます。`.venv` は除外しているので消えません。
+
+##### 起動に失敗する場合
+
+`journalctl -u bnote` に `SIGSYS`（禁止されたシステムコールの呼び出し）や `Permission denied` が出る場合は、サンドボックス設定が原因です。`/etc/systemd/system/bnote.service` の該当しそうな行（`MemoryDenyWriteExecute`、`SystemCallFilter` など）を 1 行ずつコメントアウトし、`sudo systemctl daemon-reload && sudo systemctl restart bnote` で原因を絞り込んでください。
 
 #### ユーザー権限で動かす場合
 
-root を使わず、自分のアカウントの systemd（`systemctl --user`）で常駐させます。`deploy/bnote.user.service` はリポジトリが `~/services/bnote` にある前提で書いてあるので、違う場所に置く場合はパスを書き換えてください（`%h` はホームディレクトリに置き換わります）。
+root を使わず、自分のアカウントの systemd（`systemctl --user`）で常駐させます。sudo などの権限を持つアカウントで動かすことになるため、本番では上の「専用ユーザーで動かす場合」を推奨します。事前に「セットアップ」の手順に従って `.venv` に依存パッケージをインストールしておきます。`deploy/bnote.user.service` はリポジトリが `~/services/bnote` にある前提で書いてあるので、違う場所に置く場合はパスを書き換えてください（`%h` はホームディレクトリに置き換わります）。
 
 ```bash
 mkdir -p ~/.config/systemd/user
@@ -145,23 +250,6 @@ sudo loginctl enable-linger $USER   # ログアウト中や OS 起動直後も�
 
 - `[Install]` には `WantedBy=default.target` を指定します。`multi-user.target` はユーザー用の systemd には存在しないので、指定しても自動起動されません。
 - サンドボックス設定（`ProtectSystem` など）は、unprivileged user namespace（一般ユーザーが使える名前空間機能）が有効でないと動きません。名前空間関係のエラーで起動に失敗する場合は、ユニット内のこのブロックを削除してください。`note.db` は `index.py` と同じディレクトリに作られるため、書き込みを許可するディレクトリ（`ReadWritePaths`）はプロジェクトのディレクトリにしています。
-
-#### システムサービスとして動かす場合
-
-`deploy/bnote.service` をひな形として利用します。`<USER>` と `<PROJECT_ROOT>` を環境に合わせて書き換えてください。
-
-```bash
-sudo cp deploy/bnote.service /etc/systemd/system/bnote.service
-sudo nano /etc/systemd/system/bnote.service   # <USER>, <PROJECT_ROOT> を編集
-sudo systemctl daemon-reload
-sudo systemctl enable --now bnote.service
-```
-
-状態の確認:
-
-```bash
-systemctl status bnote.service
-```
 
 ### 本番用（WSGI）
 
@@ -203,6 +291,18 @@ python3 bn.py list -t action
 # 指定日（省略時は当日）のメモを Markdown 形式で出力
 python3 bn.py md
 python3 bn.py md -d 2026-09-01
+```
+
+専用ユーザーで動かしている場合、DB は `bnote` ユーザーしか読み書きできないので、`bnote` ユーザーとして `BNOTE_DB` を指定して実行します。
+
+```bash
+sudo -u bnote BNOTE_DB=/var/lib/bnote/note.db /opt/bnote/.venv/bin/python /opt/bnote/bn.py list
+```
+
+よく使う場合はエイリアス（コマンドの別名）にしておくと便利です。
+
+```bash
+alias bn='sudo -u bnote BNOTE_DB=/var/lib/bnote/note.db /opt/bnote/.venv/bin/python /opt/bnote/bn.py'
 ```
 
 ## 主なエンドポイント
