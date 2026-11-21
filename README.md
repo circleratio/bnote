@@ -160,7 +160,7 @@ sudo useradd --system --user-group --no-create-home \
 
 # 2. Deploy the code as root-owned, read-only files
 sudo rsync -a --delete --chown=root:root \
-  --exclude .git --exclude .venv --exclude note.db --exclude '__pycache__' --exclude .ruff_cache \
+  --exclude .git --exclude .venv --exclude note.db --exclude '__pycache__' --exclude .ruff_cache --exclude '*.swp' \
   ./ /opt/bnote/
 sudo python3 -m venv /opt/bnote/.venv
 sudo /opt/bnote/.venv/bin/pip install bottle==0.12.23 python-dateutil==2.8.2
@@ -224,7 +224,7 @@ systemd-analyze security bnote.service      # Sandbox exposure score (for refere
 
 ```bash
 sudo rsync -a --delete --chown=root:root \
-  --exclude .git --exclude .venv --exclude note.db --exclude '__pycache__' --exclude .ruff_cache \
+  --exclude .git --exclude .venv --exclude note.db --exclude '__pycache__' --exclude .ruff_cache --exclude '*.swp' \
   ./ /opt/bnote/
 sudo /opt/bnote/.venv/bin/python -m compileall -q /opt/bnote
 sudo systemctl restart bnote.service

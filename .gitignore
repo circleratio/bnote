@@ -210,3 +210,7 @@ start.sh
 
 note.db
 note.db.bak
+
+# Vim swap files
+*.swp
+*.swo
