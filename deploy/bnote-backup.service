@@ -1,0 +1,56 @@
+# One-shot backup of the bnote database, started by bnote-backup.timer.
+#
+# Backups are written to /var/lib/bnote/backups (owned by bnote, mode 0700)
+# and the newest BNOTE_BACKUP_KEEP files are kept.
+#
+# Install:
+#   sudo cp deploy/bnote-backup.service deploy/bnote-backup.timer /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now bnote-backup.timer
+# Run once by hand:
+#   sudo systemctl start bnote-backup.service
+
+[Unit]
+Description=Back up the bnote database
+
+[Service]
+Type=oneshot
+User=bnote
+Group=bnote
+WorkingDirectory=/opt/bnote
+Environment=BNOTE_DB=/var/lib/bnote/note.db
+Environment=BNOTE_BACKUP_DIR=/var/lib/bnote/backups
+Environment=BNOTE_BACKUP_KEEP=14
+ExecStart=/opt/bnote/.venv/bin/python backup.py
+UMask=0077
+Nice=10
+IOSchedulingClass=idle
+
+# Shares /var/lib/bnote with bnote.service; keep the mode identical.
+StateDirectory=bnote
+StateDirectoryMode=0700
+
+# Sandboxing: no network at all, the only writable path is /var/lib/bnote.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+IPAddressDeny=any

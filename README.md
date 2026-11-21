@@ -20,10 +20,12 @@ Python の軽量 Web フレームワーク [Bottle](https://bottlepy.org/) で�
 | `index.py` | Web アプリ本体（Bottle のルーティング定義） |
 | `bn.py` | コマンドライン用ツール |
 | `db_setup.py` | データベース（`note.db`）の初期化スクリプト |
+| `backup.py` | データベースのバックアップスクリプト（世代管理付き） |
 | `adapter.wsgi` | WSGI サーバー（Apache mod_wsgi 等）用アダプター |
 | `start.sh` | 開発用の起動スクリプト |
 | `deploy/bnote.service` | systemd ユニットファイル（専用ユーザー `bnote` で動かすシステムサービス用。推奨） |
 | `deploy/bnote.user.service` | systemd ユニットファイルのサンプル（自分のアカウントで動かすユーザーサービス用） |
+| `deploy/bnote-backup.service`, `deploy/bnote-backup.timer` | 毎日バックアップを取る systemd の service と timer |
 | `*.html` | 画面テンプレート（Bottle SimpleTemplate） |
 | `static/style.css` | スタイルシート |
 
@@ -279,6 +281,47 @@ sudo systemctl stop bnote.service
 ```bash
 sudo systemctl disable bnote.service
 ```
+
+## バックアップ
+
+`backup.py` は SQLite のオンラインバックアップ機能（サービスを止めずに、書き込み途中でも一貫した状態を複製する仕組み）で DB を複製します。複製したファイルに整合性チェック（`PRAGMA integrity_check`）をかけ、問題がなければ `note-YYYYMMDD-HHMMSS.db` という名前で保存し、新しいものから指定した数だけ残して古いものを削除します。元の DB は読み取り専用で開くので、バックアップ処理が DB を変更することはありません。
+
+| 環境変数 | 既定値 | 説明 |
+| --- | --- | --- |
+| `BNOTE_DB` | `backup.py` と同じディレクトリの `note.db` | バックアップ元の DB |
+| `BNOTE_BACKUP_DIR` | DB と同じディレクトリの `backups/` | 保存先ディレクトリ（なければ権限 `700` で作成） |
+| `BNOTE_BACKUP_KEEP` | `14` | 残すバックアップの数 |
+
+### systemd timer で毎日取る
+
+専用ユーザー構成では、`deploy/bnote-backup.timer` が毎日 3:30 頃（最大 10 分のランダムな遅れあり）に `deploy/bnote-backup.service` を起動し、`/var/lib/bnote/backups` に 14 世代を残します。処理は `bnote` ユーザーで、ネットワークを使えない状態で動きます。その時刻にマシンが止まっていた場合は、次に起動したときに実行されます（`Persistent=true`）。
+
+```bash
+# /opt/bnote must already contain backup.py (see "コードの更新")
+sudo cp deploy/bnote-backup.service deploy/bnote-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now bnote-backup.timer
+
+# Run a backup right away and check the result
+sudo systemctl start bnote-backup.service
+journalctl -u bnote-backup -n 20
+sudo ls -l /var/lib/bnote/backups
+```
+
+次回の実行予定は `systemctl list-timers bnote-backup.timer` で確認できます。時刻や残す数を変えるときは `/etc/systemd/system/` のファイルを編集し、`sudo systemctl daemon-reload` を実行します。
+
+### バックアップから戻す
+
+```bash
+sudo systemctl stop bnote.service
+sudo -u bnote cp /var/lib/bnote/note.db /var/lib/bnote/note.db.before-restore
+sudo -u bnote cp /var/lib/bnote/backups/note-YYYYMMDD-HHMMSS.db /var/lib/bnote/note.db
+sudo systemctl start bnote.service
+```
+
+### 注意
+
+バックアップは DB と同じディスクに保存されるので、ディスクの故障やサーバーそのものを失った場合には役に立ちません。重要なデータであれば、`/var/lib/bnote/backups` を定期的に別のマシンやストレージへコピーしてください。
 
 ## CLI ツール（bn.py）
 

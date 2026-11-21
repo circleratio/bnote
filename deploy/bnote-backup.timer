@@ -1,0 +1,13 @@
+# Daily backup of the bnote database (see bnote-backup.service).
+
+[Unit]
+Description=Daily backup of the bnote database
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=10min
+# Run a missed backup at the next boot if the machine was off at 03:30.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
