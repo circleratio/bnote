@@ -40,7 +40,7 @@ Python の軽量 Web フレームワーク [Bottle](https://bottlepy.org/) で�
 1. リポジトリを取得し、ディレクトリへ移動します。
 
    ```bash
-   cd /home/tf/services/bnote
+   cd ~/services/bnote
    ```
 
 2. 仮想環境を作成し、有効化します。
